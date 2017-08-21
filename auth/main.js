@@ -13,6 +13,7 @@ var dns = require('dns');
 var morgan = require('morgan');
 var cookieParser = require('cookie');
 var MemoryStore = require('session-memory-store')(session);
+var RedisStore = require('connect-redis')(session);
 
 var domain = require('domain'),
     d = domain.create();
@@ -93,6 +94,13 @@ function continueInit() {
     app.set('trust proxy', true)
     app.use(express.static(path.join(__dirname, 'public'), {  maxAge: '1h' }));
     app.use(favicon(path.join(__dirname, 'public', 'img', 'favicon.ico')));
+    var sessionStore = new MemoryStore();
+    var redisUrl = process.env.SL_REDIS_URL;
+    if (redisUrl && typeof(redisUrl) !== 'undefined') {
+        sessionStore = new RedisStore({
+           url: redisUrl
+        })
+    }
     app.use(session({
         name: 'sultans.sid',
         genid: function(req) {
@@ -102,7 +110,7 @@ function continueInit() {
         resave: true,
         saveUninitialized: true,
         cookie: { secure: true },
-        store: new MemoryStore()
+        store: sessionStore
     }))
     app.use(bodyParser.urlencoded({
         extended: false
