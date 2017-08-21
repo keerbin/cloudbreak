@@ -12,6 +12,7 @@ var request = require('request');
 var dns = require('dns');
 var morgan = require('morgan');
 var cookieParser = require('cookie');
+var MemoryStore = require('session-memory-store')(session);
 
 var domain = require('domain'),
     d = domain.create();
@@ -100,7 +101,8 @@ function continueInit() {
         secret: uid(30),
         resave: true,
         saveUninitialized: true,
-        cookie: { secure: true }
+        cookie: { secure: true },
+        store: new MemoryStore()
     }))
     app.use(bodyParser.urlencoded({
         extended: false
@@ -213,7 +215,6 @@ function continueInit() {
                         if (traefikBackendCookie != null || traefikBackendCookie != 'undefined') {
                             req.session.traefik_backend = traefikBackendCookie;
                             console.log("Set _TRAEFIK_BACKEND cookie for request to: " + JSON.stringify(req.session.traefik_backend))
-                            options.headers.Cookie = options.headers.Cookie + ';_TRAEFIK_BACKEND=' + traefikBackendCookie;
                         }
 
                         getToken(req, res, function(token) {
@@ -236,6 +237,7 @@ function continueInit() {
                                             if (sourceCookie == null || sourceCookie == 'undefined') {
                                                 res.redirect(getBasePath(req) + '/dashboard')
                                             } else {
+
                                                 var sourceUrl = new Buffer(sourceCookie, 'base64').toString('utf-8')
                                                 res.redirect(sourceUrl)
                                             }
