@@ -102,7 +102,6 @@ ${core_user_data}
   ambari_${agent.instanceId}:
     type: OS::Nova::Server
     properties:
-      image: { get_param: image_id }
       name: ${agent.name}
       flavor: ${agent.flavor}
       <#if availability_zone?has_content>
@@ -113,11 +112,25 @@ ${core_user_data}
       networks:
         - port: { get_resource: ambari_app_port_${agent.instanceId} }
       <#if agent.volumesCount != 0>
-      block_device_mapping:
+      block_device_mapping_v2:
+        - boot_index: 0
+          device_name: /dev/vda
+          delete_on_termination: true
+          image_id: { get_param: image_id }
+          volume_size: 40
       <#list agent.volumes as volume>
-        - device_name: ${volume.device}
+        - boot_index: 1
+          device_name: ${volume.device}
+          delete_on_termination: true
           volume_id: { get_resource: ambari_volume_${agent.instanceId}_${volume_index} }
       </#list>
+      <#else>
+      block_device_mapping_v2:
+        - boot_index: 0
+          device_name: /dev/vda
+          delete_on_termination: true
+          image_id: { get_param: image_id }
+          volume_size: 40
       </#if>
       user_data_format: SOFTWARE_CONFIG
       <#if agent.type == "GATEWAY">
@@ -133,6 +146,7 @@ ${core_user_data}
     properties:
       name: hdfs-volume
       size: ${volume.size}
+      volume_type: SATA
 
   </#list>
 
@@ -158,6 +172,7 @@ ${core_user_data}
   <#if network.assignFloatingIp>
   ambari_server_floatingip_${agent.instanceId}:
     type: OS::Neutron::FloatingIP
+    depends_on: ambari_${agent.instanceId}
     properties:
       floating_network_id: { get_param: public_net_id }
       port_id: { get_resource: ambari_app_port_${agent.instanceId} }
